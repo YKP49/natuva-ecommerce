@@ -18,7 +18,8 @@ try {
 let currentStep = 1;
 
 // Load cart items on page load
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Page loaded');
     // Check if cart is empty
     if (!cart || cart.length === 0) {
         alert('Your cart is empty! Redirecting to home page...');
@@ -26,9 +27,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
     console.log('Cart contents:', cart); // Add this for debugging
-    displayOrderSummary();
     setupPaymentForms();
-    initializeRazorpay();
+    displayOrderSummary();
+    
+    // Debug: Check initial state
+    const step1 = document.getElementById('step1');
+    const step2 = document.getElementById('step2');
+    console.log('Initial step1 visibility:', step1 ? step1.style.display : 'step1 not found');
+    console.log('Initial step2 visibility:', step2 ? step2.style.display : 'step2 not found');
 
     const paymentButton = document.getElementById('paymentButton');
     if (paymentButton) {
@@ -68,33 +74,141 @@ function displayOrderSummary() {
 
 // Navigation between steps
 function nextStep(step) {
-    if (!validateStep(currentStep)) return;
+    console.log('nextStep called with step:', step);
+    
+    if (!validateStep(currentStep)) {
+        console.error('Step validation failed for step:', currentStep);
+        return;
+    }
+    
+    const currentStepElement = document.getElementById(`step${currentStep}`);
+    const nextStepElement = document.getElementById(`step${step}`);
+    
+    console.log('Current step element:', currentStepElement);
+    console.log('Next step element:', nextStepElement);
+    
+    if (!currentStepElement || !nextStepElement) {
+        console.error('Step elements not found:', { 
+            currentStep: currentStep, 
+            nextStep: step,
+            currentElement: currentStepElement,
+            nextElement: nextStepElement
+        });
+        return;
+    }
     
     // Hide current step
-    document.querySelector(`#step${currentStep}`).classList.remove('active');
-    document.querySelector(`.progress-step[data-step="${currentStep}"]`).classList.remove('active');
+    currentStepElement.style.display = 'none';
+    currentStepElement.classList.remove('active');
     
     // Show next step
-    document.querySelector(`#step${step}`).classList.add('active');
-    document.querySelector(`.progress-step[data-step="${step}"]`).classList.add('active');
+    nextStepElement.style.display = 'block';
+    nextStepElement.classList.add('active');
+    
+    // Update progress indicators
+    const currentProgress = document.querySelector(`.progress-step[data-step="${currentStep}"]`);
+    const nextProgress = document.querySelector(`.progress-step[data-step="${step}"]`);
+    
+    if (currentProgress) currentProgress.classList.remove('active');
+    if (nextProgress) nextProgress.classList.add('active');
+    
+    console.log('Step transition complete:', {
+        from: currentStep,
+        to: step,
+        currentStepDisplay: currentStepElement.style.display,
+        nextStepDisplay: nextStepElement.style.display
+    });
     
     currentStep = step;
 }
 
 // Validate each step
 function validateStep(step) {
+    console.log('Validating step:', step);
+    
     switch(step) {
         case 1:
             if (cart.length === 0) {
+                console.error('Cart is empty');
                 alert('Your cart is empty!');
                 return false;
             }
-            return validateCustomerDetails();
+            const isValid = validateCustomerDetails();
+            console.log('Customer details validation:', isValid);
+            return isValid;
         case 2:
+            console.log('Step 2 validation: always true');
             return true; // Payment validation will happen on place order
         default:
+            console.log('Unknown step:', step);
             return true;
     }
+}
+
+// Validate customer details
+function validateCustomerDetails() {
+    const name = document.getElementById('customerName').value;
+    const email = document.getElementById('customerEmail').value;
+    const phone = document.getElementById('customerPhone').value;
+    const street = document.getElementById('streetAddress').value;
+    const locality = document.getElementById('locality').value;
+    const city = document.getElementById('city').value;
+    const state = document.getElementById('state').value;
+    const pincode = document.getElementById('pincode').value;
+
+    // Clear previous errors
+    clearFieldError(document.getElementById('customerName'));
+    clearFieldError(document.getElementById('customerEmail'));
+    clearFieldError(document.getElementById('customerPhone'));
+    clearFieldError(document.getElementById('streetAddress'));
+    clearFieldError(document.getElementById('locality'));
+    clearFieldError(document.getElementById('city'));
+    clearFieldError(document.getElementById('state'));
+    clearFieldError(document.getElementById('pincode'));
+
+    let isValid = true;
+
+    if (!name.trim()) {
+        markFieldAsError(document.getElementById('customerName'), 'Name is required');
+        isValid = false;
+    }
+
+    if (!email.trim() || !isValidEmail(email)) {
+        markFieldAsError(document.getElementById('customerEmail'), 'Valid email is required');
+        isValid = false;
+    }
+
+    if (!phone.trim() || !isValidPhone(phone)) {
+        markFieldAsError(document.getElementById('customerPhone'), 'Valid 10-digit phone number is required');
+        isValid = false;
+    }
+
+    if (!street.trim()) {
+        markFieldAsError(document.getElementById('streetAddress'), 'Street address is required');
+        isValid = false;
+    }
+
+    if (!locality.trim()) {
+        markFieldAsError(document.getElementById('locality'), 'Locality is required');
+        isValid = false;
+    }
+
+    if (!city.trim()) {
+        markFieldAsError(document.getElementById('city'), 'City is required');
+        isValid = false;
+    }
+
+    if (!state.trim()) {
+        markFieldAsError(document.getElementById('state'), 'State is required');
+        isValid = false;
+    }
+
+    if (!pincode.trim() || !isValidPincode(pincode)) {
+        markFieldAsError(document.getElementById('pincode'), 'Valid 6-digit pincode is required');
+        isValid = false;
+    }
+
+    return isValid;
 }
 
 // Handle payment method selection
@@ -312,72 +426,6 @@ window.onclick = function(event) {
     if (event.target === modal) {
         modal.style.display = 'none';
     }
-}
-
-// Validate customer details
-function validateCustomerDetails() {
-    const name = document.getElementById('customerName').value;
-    const email = document.getElementById('customerEmail').value;
-    const phone = document.getElementById('customerPhone').value;
-    const street = document.getElementById('streetAddress').value;
-    const locality = document.getElementById('locality').value;
-    const city = document.getElementById('city').value;
-    const state = document.getElementById('state').value;
-    const pincode = document.getElementById('pincode').value;
-
-    // Clear previous errors
-    clearFieldError(document.getElementById('customerName'));
-    clearFieldError(document.getElementById('customerEmail'));
-    clearFieldError(document.getElementById('customerPhone'));
-    clearFieldError(document.getElementById('streetAddress'));
-    clearFieldError(document.getElementById('locality'));
-    clearFieldError(document.getElementById('city'));
-    clearFieldError(document.getElementById('state'));
-    clearFieldError(document.getElementById('pincode'));
-
-    let isValid = true;
-
-    if (!name.trim()) {
-        markFieldAsError(document.getElementById('customerName'), 'Name is required');
-        isValid = false;
-    }
-
-    if (!email.trim() || !isValidEmail(email)) {
-        markFieldAsError(document.getElementById('customerEmail'), 'Valid email is required');
-        isValid = false;
-    }
-
-    if (!phone.trim() || !isValidPhone(phone)) {
-        markFieldAsError(document.getElementById('customerPhone'), 'Valid 10-digit phone number is required');
-        isValid = false;
-    }
-
-    if (!street.trim()) {
-        markFieldAsError(document.getElementById('streetAddress'), 'Street address is required');
-        isValid = false;
-    }
-
-    if (!locality.trim()) {
-        markFieldAsError(document.getElementById('locality'), 'Locality is required');
-        isValid = false;
-    }
-
-    if (!city.trim()) {
-        markFieldAsError(document.getElementById('city'), 'City is required');
-        isValid = false;
-    }
-
-    if (!state.trim()) {
-        markFieldAsError(document.getElementById('state'), 'State is required');
-        isValid = false;
-    }
-
-    if (!pincode.trim() || !isValidPincode(pincode)) {
-        markFieldAsError(document.getElementById('pincode'), 'Valid 6-digit pincode is required');
-        isValid = false;
-    }
-
-    return isValid;
 }
 
 // Validation helper functions
