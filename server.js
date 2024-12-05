@@ -1,26 +1,31 @@
-
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
-const db = require('./database');
 const path = require('path');
-const fs = require('fs');
+const db = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Increase payload size limit
+// Middleware
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
-
-// Configure CORS
 app.use(cors({
-    origin: '*', // In production, replace with your frontend domain
+    origin: '*',
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Serve static files from the current directory
+app.use(express.static(path.join(__dirname)));
+
+// Root route
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 // Initialize Razorpay
 const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID || 'your_key_id',
@@ -30,7 +35,7 @@ const razorpay = new Razorpay({
 // Create Razorpay order
 app.post('/api/create-order', async (req, res) => {
     try {
-        const { amount } = req.body;
+        const { amount, currency } = req.body;
         
         if (!amount || amount <= 0) {
             return res.status(400).json({ error: 'Invalid amount' });
@@ -38,8 +43,8 @@ app.post('/api/create-order', async (req, res) => {
 
         const options = {
             amount: Math.round(amount * 100), // amount in paisa
-            currency: 'INR',
-            receipt: 'order_' + Date.now(),
+            currency: currency || 'INR',
+            receipt: `order_${Date.now()}`,
             payment_capture: 1
         };
 
@@ -57,14 +62,14 @@ app.post('/api/verify-payment', (req, res) => {
         const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
         
         const generated_signature = crypto
-            .createHmac('sha256', razorpay.key_secret)
+            .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
             .update(razorpay_order_id + '|' + razorpay_payment_id)
             .digest('hex');
-        
+
         if (generated_signature === razorpay_signature) {
-            res.json({ verified: true });
+            res.json({ status: 'success' });
         } else {
-            res.status(400).json({ verified: false });
+            res.status(400).json({ status: 'failed' });
         }
     } catch (error) {
         console.error('Payment verification error:', error);
@@ -72,27 +77,7 @@ app.post('/api/verify-payment', (req, res) => {
     }
 });
 
-// Save order endpoint
-app.post('/api/save-order', (req, res) => {
-    const { customerDetails, cartItems, paymentMethod, paymentDetails } = req.body;
-    
-    // Here you would typically save the order to your database
-    // For now, we'll just send back a success response
-    res.json({
-        success: true,
-        message: 'Order saved successfully',
-        orderId: 'ORD' + Date.now()
-    });
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-    console.error('Server error:', err);
-    res.status(500).json({ error: 'Internal server error', message: err.message });
-});
-
-// Start server
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-});
-
