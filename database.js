@@ -1,5 +1,23 @@
 const sqlite3 = require('sqlite3').verbose();
-const db = new sqlite3.Database('natuva.db');
+const path = require('path');
+const fs = require('fs');
+
+// Ensure the database path works in different environments
+const dbPath = process.env.DATABASE_PATH || path.join(__dirname, 'natuva.db');
+
+// Ensure the directory exists
+const dbDir = path.dirname(dbPath);
+if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+}
+
+const db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+        console.error('Error opening database', err);
+    } else {
+        console.log('Database opened successfully');
+    }
+});
 
 // Create tables if they don't exist
 db.serialize(() => {
@@ -20,36 +38,22 @@ db.serialize(() => {
     // Orders table
     db.run(`CREATE TABLE IF NOT EXISTS orders (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        customer_id INTEGER NOT NULL,
-        total_amount DECIMAL(10,2) NOT NULL,
-        payment_method TEXT NOT NULL,
+        customer_id INTEGER,
+        total_amount REAL NOT NULL,
         payment_status TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (customer_id) REFERENCES customers(id)
+        order_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(customer_id) REFERENCES customers(id)
     )`);
 
     // Order items table
     db.run(`CREATE TABLE IF NOT EXISTS order_items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         order_id INTEGER NOT NULL,
-        product_name TEXT NOT NULL,
+        product_id INTEGER NOT NULL,
         quantity INTEGER NOT NULL,
-        price DECIMAL(10,2) NOT NULL,
-        FOREIGN KEY (order_id) REFERENCES orders(id)
-    )`);
-
-    // Payment details table
-    db.run(`CREATE TABLE IF NOT EXISTS payment_details (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        order_id INTEGER NOT NULL,
-        payment_method TEXT NOT NULL,
-        payment_id TEXT,
-        upi_id TEXT,
-        card_number TEXT,
-        card_expiry TEXT,
-        payment_status TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (order_id) REFERENCES orders(id)
+        price REAL NOT NULL,
+        FOREIGN KEY(order_id) REFERENCES orders(id),
+        FOREIGN KEY(product_id) REFERENCES products(id)
     )`);
 });
 
