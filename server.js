@@ -8,6 +8,7 @@ const db = require('./database');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+
 // Increase payload size limit
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
@@ -18,11 +19,10 @@ app.use(cors({
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
-
 // Initialize Razorpay
 const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_8qzUfq79bivjdu',
-    key_secret: process.env.RAZORPAY_KEY_SECRET || 'UVty3tdrBNZMwJMSvOuMOVIo'
+    key_id: process.env.RAZORPAY_KEY_ID || 'your_key_id',
+    key_secret: process.env.RAZORPAY_KEY_SECRET || 'your_key_secret'
 });
 
 // Create Razorpay order
