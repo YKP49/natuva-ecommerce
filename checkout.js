@@ -28,7 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Cart contents:', cart); // Add this for debugging
     displayOrderSummary();
     setupPaymentForms();
-    initializeGooglePlaces();
     initializeRazorpay();
 
     const paymentButton = document.getElementById('paymentButton');
@@ -315,127 +314,68 @@ window.onclick = function(event) {
     }
 }
 
-// Initialize Google Places Autocomplete
-function initializeGooglePlaces() {
-    const input = document.getElementById('searchAddress');
-    const autocomplete = new google.maps.places.Autocomplete(input, {
-        componentRestrictions: { country: 'IN' },
-        fields: ['address_components', 'formatted_address', 'geometry']
-    });
-
-    autocomplete.addListener('place_changed', function() {
-        const place = autocomplete.getPlace();
-        fillAddressFields(place);
-    });
-}
-
-// Fill address fields from Google Places result
-function fillAddressFields(place) {
-    // Reset all fields
-    document.getElementById('streetAddress').value = '';
-    document.getElementById('locality').value = '';
-    document.getElementById('city').value = '';
-    document.getElementById('state').value = '';
-    document.getElementById('pincode').value = '';
-
-    if (!place.address_components) return;
-
-    // Create a mapping for the address components
-    const componentForm = {
-        street_number: 'short_name',
-        route: 'long_name',
-        sublocality_level_1: 'long_name',
-        locality: 'long_name',
-        administrative_area_level_1: 'long_name',
-        postal_code: 'short_name'
-    };
-
-    let streetNumber = '';
-    let streetName = '';
-
-    // Fill the address fields based on address_components
-    for (const component of place.address_components) {
-        const addressType = component.types[0];
-
-        if (componentForm[addressType]) {
-            const val = component[componentForm[addressType]];
-            
-            switch(addressType) {
-                case 'street_number':
-                    streetNumber = val;
-                    break;
-                case 'route':
-                    streetName = val;
-                    break;
-                case 'sublocality_level_1':
-                    document.getElementById('locality').value = val;
-                    break;
-                case 'locality':
-                    document.getElementById('city').value = val;
-                    break;
-                case 'administrative_area_level_1':
-                    document.getElementById('state').value = val;
-                    break;
-                case 'postal_code':
-                    document.getElementById('pincode').value = val;
-                    break;
-            }
-        }
-    }
-
-    // Combine street number and name
-    document.getElementById('streetAddress').value = 
-        (streetNumber ? streetNumber + ' ' : '') + streetName;
-}
-
 // Validate customer details
 function validateCustomerDetails() {
-    const required = [
-        'customerName', 
-        'customerEmail', 
-        'customerPhone', 
-        'streetAddress', 
-        'locality', 
-        'city', 
-        'state', 
-        'pincode'
-    ];
+    const name = document.getElementById('customerName').value;
+    const email = document.getElementById('customerEmail').value;
+    const phone = document.getElementById('customerPhone').value;
+    const street = document.getElementById('streetAddress').value;
+    const locality = document.getElementById('locality').value;
+    const city = document.getElementById('city').value;
+    const state = document.getElementById('state').value;
+    const pincode = document.getElementById('pincode').value;
+
+    // Clear previous errors
+    clearFieldError(document.getElementById('customerName'));
+    clearFieldError(document.getElementById('customerEmail'));
+    clearFieldError(document.getElementById('customerPhone'));
+    clearFieldError(document.getElementById('streetAddress'));
+    clearFieldError(document.getElementById('locality'));
+    clearFieldError(document.getElementById('city'));
+    clearFieldError(document.getElementById('state'));
+    clearFieldError(document.getElementById('pincode'));
 
     let isValid = true;
 
-    required.forEach(id => {
-        const input = document.getElementById(id);
-        const value = input.value.trim();
-        
-        if (!value) {
-            markFieldAsError(input, 'This field is required');
-            isValid = false;
-        } else {
-            clearFieldError(input);
-            
-            // Additional validation based on field type
-            switch(id) {
-                case 'customerEmail':
-                    if (!isValidEmail(value)) {
-                        markFieldAsError(input, 'Please enter a valid email address');
-                        isValid = false;
-                    }
-                    break;
-                case 'customerPhone':
-                    if (!isValidPhone(value)) {
-                        markFieldAsError(input, 'Please enter a valid 10-digit phone number');
-                        isValid = false;
-                    }
-                    break;
-                case 'pincode':
-                    if (!isValidPincode(value)) {
-                        markFieldAsError(input, 'Please enter a valid 6-digit PIN code');
-                        isValid = false;
-                    }
-                    break;
-            }
-        }
-    });
+    if (!name.trim()) {
+        markFieldAsError(document.getElementById('customerName'), 'Name is required');
+        isValid = false;
+    }
+
+    if (!email.trim() || !isValidEmail(email)) {
+        markFieldAsError(document.getElementById('customerEmail'), 'Valid email is required');
+        isValid = false;
+    }
+
+    if (!phone.trim() || !isValidPhone(phone)) {
+        markFieldAsError(document.getElementById('customerPhone'), 'Valid 10-digit phone number is required');
+        isValid = false;
+    }
+
+    if (!street.trim()) {
+        markFieldAsError(document.getElementById('streetAddress'), 'Street address is required');
+        isValid = false;
+    }
+
+    if (!locality.trim()) {
+        markFieldAsError(document.getElementById('locality'), 'Locality is required');
+        isValid = false;
+    }
+
+    if (!city.trim()) {
+        markFieldAsError(document.getElementById('city'), 'City is required');
+        isValid = false;
+    }
+
+    if (!state.trim()) {
+        markFieldAsError(document.getElementById('state'), 'State is required');
+        isValid = false;
+    }
+
+    if (!pincode.trim() || !isValidPincode(pincode)) {
+        markFieldAsError(document.getElementById('pincode'), 'Valid 6-digit pincode is required');
+        isValid = false;
+    }
 
     return isValid;
 }
