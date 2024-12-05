@@ -189,6 +189,26 @@ input[type="tel"]:focus {
     outline: none;
 }
 
+.continue-button {
+    width: 100%;
+    padding: 15px;
+    background-color: var(--gold);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.continue-button:hover {
+    background-color: var(--secondary-color);
+}
+
+.continue-button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
 /* Payment Methods */
 .payment-methods {
     margin-bottom: 30px;
